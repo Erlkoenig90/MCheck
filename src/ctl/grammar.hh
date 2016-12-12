@@ -31,6 +31,7 @@ namespace CTL {
 
 
 bool parse (const std::string& str, Expression& res);
+bool isEmpty (const std::string& str);
 
 }
 

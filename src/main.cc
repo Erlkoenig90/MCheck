@@ -61,17 +61,19 @@ int main (int argc, char* argv []) {
 
 			for (std::string line; std::getline (fileFormula, line); ) {
 				CTL::Expression formula;
-				if (!CTL::parse (line, formula))
-					throw std::runtime_error ("Failed to parse formula \"" + line + "\" from file \"" + filenameFormula + "\"");
+				if (!CTL::isEmpty(line)) {
+					if (!CTL::parse (line, formula))
+						throw std::runtime_error ("Failed to parse formula \"" + line + "\" from file \"" + filenameFormula + "\"");
 
-				auto sat = CTL::computeSat (formula, ts);
-				std::cout << line << std::endl;
-				if (sat.first)
-					std::cout << "Is satisfied" << std::endl;
-				else
-					std::cout << "Is not satisfied" << std::endl;
+					auto sat = CTL::computeSat (formula, ts);
+					std::cout << line << std::endl;
+					if (sat.first)
+						std::cout << "Is satisfied" << std::endl;
+					else
+						std::cout << "Is not satisfied" << std::endl;
 
-				sat.second->print (std::cout, 0);
+					sat.second->print (std::cout, 0);
+				}
 			}
 		}
 	} catch (std::exception& e) {

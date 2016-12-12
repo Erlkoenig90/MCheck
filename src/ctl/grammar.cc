@@ -140,29 +140,30 @@ struct Grammar : boost::spirit::qi::grammar<Iterator, Expression(), uspace_type>
 		using boost::phoenix::at_c;
 		using boost::spirit::qi::as_string;
 		using boost::spirit::repository::qi::iter_pos;
+		using boost::spirit::qi::byte_;
 
-		formula %= expression >> eoi;
+		formula %= expression >> -(lit('#') >> *byte_) >> eoi;
 
 		expression %=
 				andR | orR | implication | existNext | existAlways | allNext | allAlways | primaryExpression;
 
 		primaryExpression %= literal | negation | existUntil | allUntil | label | (lit('(') >> expression >> lit(')'));
 
-		literal %= lexeme[iter_pos >> bool_ >> !identifier >> iter_pos];
+		literal %= lexeme[iter_pos >> ((bool_ >> !identifier) | (lit("⊤") [ at_c<1>(_val) = true]) | (lit("⊥") [ at_c<1>(_val) = false])) >> iter_pos];
 		label %= lexeme [iter_pos >> identifier >> iter_pos];
 
-		negation %= iter_pos >> lit("¬") >> primaryExpression >> iter_pos;
-		andR %= iter_pos >> primaryExpression >> lit("∧") >> primaryExpression >> iter_pos;
-		orR %= iter_pos >> primaryExpression >> lit("∨") >> primaryExpression >> iter_pos;
-		implication %= iter_pos >> primaryExpression >> lit("→") >> primaryExpression >> iter_pos;
+		negation %= iter_pos >> (lit("¬") | lit("!")) >> primaryExpression >> iter_pos;
+		andR %= iter_pos >> primaryExpression >> (lit("&") | lit("∧")) >> primaryExpression >> iter_pos;
+		orR %= iter_pos >> primaryExpression >> (lit("|") | lit("∨")) >> primaryExpression >> iter_pos;
+		implication %= iter_pos >> primaryExpression >> (lit("->") | lit("→")) >> primaryExpression >> iter_pos;
 
-		existNext %= iter_pos >> lit("∃") >> lit('X') >> primaryExpression >> iter_pos;
-		existUntil %= iter_pos >> lit("∃") >> lit('(') >> primaryExpression >> lit('U') >> primaryExpression >> lit(')') >> iter_pos;
-		existAlways %= iter_pos >> lit("∃") >> lit("⬜") >> primaryExpression >> iter_pos;
+		existNext %= iter_pos >> (lit("∃") | lit("E")) >> lit('X') >> primaryExpression >> iter_pos;
+		existUntil %= iter_pos >> (lit("∃") | lit("E")) >> lit('(') >> primaryExpression >> lit('U') >> primaryExpression >> lit(')') >> iter_pos;
+		existAlways %= iter_pos >> (lit("∃") | lit("E")) >> (lit("⬜") | lit("W")) >> primaryExpression >> iter_pos;
 
-		allNext %= iter_pos >> lit("∀") >> lit('X') >> primaryExpression >> iter_pos;
-		allUntil %= iter_pos >> lit("∀") >> lit('(') >> primaryExpression >> lit('U') >> primaryExpression >> lit(')') >> iter_pos;
-		allAlways %= iter_pos >> lit("∀") >> lit("⬜") >> primaryExpression >> iter_pos;
+		allNext %= iter_pos >> (lit("∀") | lit("A")) >> lit('X') >> primaryExpression >> iter_pos;
+		allUntil %= iter_pos >> (lit("∀") | lit("A")) >> lit('(') >> primaryExpression >> lit('U') >> primaryExpression >> lit(')') >> iter_pos;
+		allAlways %= iter_pos >> (lit("∀") | lit("A")) >> (lit("⬜") | lit("W")) >> primaryExpression >> iter_pos;
 	}
 
 	rule <Iterator, Expression(), Skip> formula;
@@ -193,6 +194,18 @@ bool parse (const std::string& str, Expression& res) {
 	std::string::const_iterator end = str.cend ();
 
 	return boost::spirit::qi::phrase_parse (begin, end, g, uspace, res) && begin == end;
+}
+
+bool isEmpty (const std::string& str) {
+	using boost::spirit::qi::byte_;
+	using boost::spirit::qi::eoi;
+
+	std::string::const_iterator begin = str.cbegin ();
+	std::string::const_iterator end = str.cend ();
+
+	return
+		str.empty ()
+	||	(boost::spirit::qi::parse (begin, end, -uspace >> -(boost::spirit::qi::lit ('#') >> *byte_) >> eoi) && begin == end);
 }
 
 }

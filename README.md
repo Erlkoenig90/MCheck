@@ -21,23 +21,23 @@ CTL Formulae look like this:
 ∀ ⬜ (y → (∀ X g))
 ∃ ⬜ ∃(r U (∀X y))
 ```
-Unicode UTF-8 characters are used for the operators. The following syntax elements are defined (Φ,Ψ are placeholders for sub-formulae):
+Unicode UTF-8 characters are used for the operators. ASCII symbols are available as alternatives. Here, r, g and y are atomic propositions that correspond to the ones defined in the transition system. The following syntax elements are defined (Φ,Ψ are placeholders for sub-formulae):
 
-Form | Description
------|------------
-true/false | Boolean literals
-¬Φ | Negation
-Φ∧Ψ | Logical And
-Φ∨Ψ | Logical Or
-Φ→Ψ | Logical implication
-∃XΦ | Exists next
-∃(Φ U Ψ) | Exists until
-∃⬜Φ | Exists always
-∀XΦ|For all next
-∀(Φ U Ψ) | For all until
-∀⬜Φ | For all always
+Form | ASCII Alternative | Description
+-----|-------------------|------------
+⊤ / ⊥ | true/false | Boolean literals
+¬Φ | ! | Negation
+Φ∧Ψ | & | Logical And
+Φ∨Ψ | \| | Logical Or
+Φ→Ψ | -> | Logical implication
+∃XΦ | E X | Exists next
+∃(Φ U Ψ) | E(Φ U Ψ) | Exists until
+∃⬜Φ | E W | Exists always
+∀XΦ | A X Φ | For all next
+∀(Φ U Ψ) | A(Φ U Ψ) | For all until
+∀⬜Φ | A W Φ | For all always
 
-Formulae are input via simple text files, one formula per line. The text files must be encoded as UTF-8, without a byte order mark. Therefore, Windows notepad can not be used.
+Formulae are input via simple text files, one formula per line. Empty lines are ignored, as are comments starting with #. If the unicode operators are used, the files must be encoded as UTF-8, without a byte order mark. Therefore, Windows notepad can not be used. Whitespace is generally ignored except within atomic propositions.
 
 ## Usage
 MCheck is a console application, run it as:
