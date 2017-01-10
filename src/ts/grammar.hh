@@ -25,7 +25,7 @@
 
 #include <string>
 
-#include "ast.hh"
+#include "ts_ast.hh"
 
 namespace TS {
 

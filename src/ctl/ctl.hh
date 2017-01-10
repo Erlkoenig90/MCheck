@@ -36,7 +36,7 @@
 #include <boost/fusion/include/equal_to.hpp>
 
 #include "../ts/sys.hh"
-#include "ast.hh"
+#include "../formula_ast.hh"
 
 namespace CTL {
 	using SatSet = std::set<TS::State*>;
@@ -45,29 +45,29 @@ namespace CTL {
 
 	class S_Formula {
 		public:
-			S_Formula (const Expression& e, SatSet&& s, std::string::const_iterator sb, std::string::const_iterator se) : exp (e), sat (std::move (s)), strBegin (sb), strEnd (se) {}
+			S_Formula (const Formula::Expression& e, SatSet&& s, std::string::const_iterator sb, std::string::const_iterator se) : exp (e), sat (std::move (s)), strBegin (sb), strEnd (se) {}
 
 			virtual void print (std::ostream& os, size_t depth);
 
-			const Expression& exp;
+			const Formula::Expression& exp;
 			SatSet sat;
 			std::string::const_iterator strBegin, strEnd;
 	};
 	class S_Nullary : public S_Formula {
 		public:
-			S_Nullary (const Expression& e, SatSet&& s, std::string::const_iterator sb, std::string::const_iterator se) : S_Formula (e, std::move (s), sb, se) {}
+			S_Nullary (const Formula::Expression& e, SatSet&& s, std::string::const_iterator sb, std::string::const_iterator se) : S_Formula (e, std::move (s), sb, se) {}
 			virtual void print (std::ostream& os, size_t depth);
 	};
 	class S_Unary : public S_Formula {
 		public:
-			S_Unary (const Expression& e, SatSet&& s, std::unique_ptr<S_Formula>&& c, std::string::const_iterator sb, std::string::const_iterator se)
+			S_Unary (const Formula::Expression& e, SatSet&& s, std::unique_ptr<S_Formula>&& c, std::string::const_iterator sb, std::string::const_iterator se)
 				: S_Formula (e, std::move (s), sb, se), child (std::move (c)) {}
 			virtual void print (std::ostream& os, size_t depth);
 			std::unique_ptr<S_Formula> child;
 	};
 	class S_Binary : public S_Formula {
 		public:
-			S_Binary (const Expression& e, SatSet&& s, std::unique_ptr<S_Formula>&& l, std::unique_ptr<S_Formula>&& r, std::string::const_iterator sb, std::string::const_iterator se)
+			S_Binary (const Formula::Expression& e, SatSet&& s, std::unique_ptr<S_Formula>&& l, std::unique_ptr<S_Formula>&& r, std::string::const_iterator sb, std::string::const_iterator se)
 				: S_Formula (e, std::move (s), sb, se), left (std::move (l)), right (std::move (r)) {}
 			virtual void print (std::ostream& os, size_t depth);
 			std::unique_ptr<S_Formula> left, right;
@@ -97,18 +97,20 @@ namespace CTL {
 			return std::make_unique<S_Binary> (exp, std::move (sat), std::move (left), std::move (right), exp.strBegin, exp.strEnd);
 		}
 
-		std::unique_ptr<S_Formula> operator() (const E_Literal& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_Negation& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_And& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_Or& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_Implication& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_ExistNext& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_ExistUntil& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_ExistAlways& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_AllNext& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_AllUntil& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_AllAlways& exp) const;
-		std::unique_ptr<S_Formula> operator() (const E_Label& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Literal& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Negation& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_And& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Or& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Implication& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_ExistNext& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_ExistUntil& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_ExistAlways& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_AllNext& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_AllUntil& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_AllAlways& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Label& exp) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Next&) const;
+		std::unique_ptr<S_Formula> operator() (const Formula::E_Until&) const;
 	};
 
 	template <typename T>
@@ -157,7 +159,7 @@ namespace CTL {
 		return false;
 	}
 
-	std::pair<bool, std::unique_ptr<S_Formula>> computeSat (const Expression& formula, TS::TranSys& ts);
+	std::pair<bool, std::unique_ptr<S_Formula>> computeSat (const Formula::Expression& formula, TS::TranSys& ts);
 }
 
 

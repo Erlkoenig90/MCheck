@@ -26,36 +26,36 @@
 
 namespace CTL {
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_Literal& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_Literal& exp) const {
 	return nullary (exp, [&] () { return exp.value ? SatSet { tranSys.statesSet } : SatSet {}; });
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_Negation& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_Negation& exp) const {
 	return unary (exp, [&] (S_Formula& child) {
 		return tranSys.statesSet - child.sat;
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_And& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_And& exp) const {
 	return binary (exp, [&] (S_Formula& left, S_Formula& right) {
 		return left.sat & right.sat;
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_Or& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_Or& exp) const {
 	return binary (exp, [&] (S_Formula& left, S_Formula& right) {
 		return left.sat | right.sat;
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator() (const E_Implication& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator() (const Formula::E_Implication& exp) const {
 	return binary (exp, [&] (S_Formula& left, S_Formula& right) {
 		return (tranSys.statesSet - left.sat) | right.sat;
 	});
 }
 
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_ExistNext& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_ExistNext& exp) const {
 	return unary (exp, [&] (S_Formula& child) {
 		std::set<TS::State*> predecessors;
 		for (auto& s : child.sat) {
@@ -66,7 +66,7 @@ std::unique_ptr<S_Formula> SatVisitor::operator () (const E_ExistNext& exp) cons
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_ExistUntil& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_ExistUntil& exp) const {
 	return binary (exp, [&] (S_Formula& left, S_Formula& right) {
 		std::set<TS::State*> T = right.sat;
 		bool modified;
@@ -86,7 +86,7 @@ std::unique_ptr<S_Formula> SatVisitor::operator () (const E_ExistUntil& exp) con
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_ExistAlways& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_ExistAlways& exp) const {
 	return unary (exp, [&] (S_Formula& child) {
 		std::set<TS::State*> T = child.sat;
 		bool modified;
@@ -104,7 +104,7 @@ std::unique_ptr<S_Formula> SatVisitor::operator () (const E_ExistAlways& exp) co
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator() (const E_AllNext& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator() (const Formula::E_AllNext& exp) const {
 	return unary (exp, [&] (S_Formula& child) {
 		std::set<TS::State*> exclusivePredecessors;
 		for (auto& s : child.sat) {
@@ -118,7 +118,7 @@ std::unique_ptr<S_Formula> SatVisitor::operator() (const E_AllNext& exp) const {
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator() (const E_AllUntil& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator() (const Formula::E_AllUntil& exp) const {
 	return binary (exp, [&] (S_Formula& left, S_Formula& right) {
 		std::set<TS::State*> T = right.sat;
 		bool modified;
@@ -141,7 +141,7 @@ std::unique_ptr<S_Formula> SatVisitor::operator() (const E_AllUntil& exp) const 
 	});
 }
 
-std::unique_ptr<S_Formula> SatVisitor::operator() (const E_AllAlways& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator() (const Formula::E_AllAlways& exp) const {
 	return unary (exp, [&] (S_Formula& child) {
 		std::set<TS::State*> T = child.sat;
 		bool modified;
@@ -160,7 +160,7 @@ std::unique_ptr<S_Formula> SatVisitor::operator() (const E_AllAlways& exp) const
 }
 
 
-std::unique_ptr<S_Formula> SatVisitor::operator () (const E_Label& exp) const {
+std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_Label& exp) const {
 	return nullary (exp, [&] () {
 		auto res = tranSys.labels.find (exp.name);
 		if (res == tranSys.labels.end ())
@@ -176,7 +176,15 @@ std::unique_ptr<S_Formula> SatVisitor::operator () (const E_Label& exp) const {
 	});
 }
 
-std::pair<bool, std::unique_ptr<S_Formula>> computeSat (const Expression& formula, TS::TranSys& ts) {
+std::unique_ptr<S_Formula> SatVisitor::operator() (const Formula::E_Next&) const {
+	throw std::runtime_error ("Illegal node in AST");
+}
+
+std::unique_ptr<S_Formula> SatVisitor::operator() (const Formula::E_Until&) const {
+	throw std::runtime_error ("Illegal node in AST");
+}
+
+std::pair<bool, std::unique_ptr<S_Formula>> computeSat (const Formula::Expression& formula, TS::TranSys& ts) {
 	std::unique_ptr<S_Formula> res = boost::apply_visitor (SatVisitor { ts }, formula);
 	bool s = ts.init <= res->sat;
 	return std::make_pair (s, std::move (res));

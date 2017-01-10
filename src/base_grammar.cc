@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Niklas Gürtler
+ * Copyright (c) 2017, Niklas Gürtler
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -20,50 +20,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SRC_TS_SYS_HH_
-#define SRC_TS_SYS_HH_
+#include "base_grammar.hh"
 
-#include <set>
-#include <map>
-#include <vector>
-#include <string>
-#include <stdexcept>
-#include <functional>
+bool BaseGrammar::isEmpty (const std::string& str) {
+	using boost::spirit::qi::byte_;
+	using boost::spirit::qi::eoi;
 
-#include "ts_ast.hh"
+	std::string::const_iterator begin = str.cbegin ();
+	std::string::const_iterator end = str.cend ();
 
-namespace TS {
-	class Label {
-		public:
-			std::string name;
-	};
+	return
+		str.empty ()
+	||	(boost::spirit::qi::parse (begin, end, -uspace >> -(boost::spirit::qi::lit ('#') >> *byte_) >> eoi) && begin == end);
 }
-
-namespace std {
-	template <>
-	struct hash<::TS::Label> {
-		size_t operator() (const ::TS::Label &l) const {
-			return std::hash<std::string> () (l.name);
-		}
-	};
-}
-
-namespace TS {
-	class State {
-		public:
-			inline State (const std::string& name_) : name (name_) {}
-			std::string name;
-			std::set<Label*> atomicPropositions;
-			std::set<State*> predecessors, successors;
-	};
-	class TranSys {
-		public:
-			std::map<std::string, Label> labels;
-			std::map<std::string, State> statesMap;
-			std::set<State*> statesSet, init;
-
-			TranSys (const E_Graph& src);
-	};
-}
-
-#endif /* SRC_TS_SYS_HH_ */

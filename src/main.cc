@@ -31,16 +31,29 @@
 
 #include "ts/grammar.hh"
 #include "ts/sys.hh"
-#include "ctl/grammar.hh"
+#include "ctl/ctl_grammar.hh"
 #include "ctl/ctl.hh"
+#include "ltl/ltl_grammar.hh"
+#include "ltl/ltl.hh"
+#include "ltl/ltl_output.hh"
+
+void usage (char* argv []) {
+	throw std::runtime_error ("Usage:\n" + std::string(argv [0]) + " CTL TS-File Formula-File\n" + std::string(argv [0]) + " LTL TS-File Formula-File PDFOutput");
+}
 
 int main (int argc, char* argv []) {
 	try {
-		if (argc != 3) {
-			throw std::runtime_error ("Usage: " + std::string(argv [0]) + " TS-File Formula-File");
+		if (argc < 2) {
+			usage (argv);
 		} else {
-			std::string filenameTS = argv [1];
-			std::string filenameFormula = argv [2];
+			const bool ctl = std::string(argv[1]) == "CTL";
+			if (ctl && argc < 4)
+				usage (argv);
+			if (!ctl && argc < 5)
+				usage (argv);
+
+			std::string filenameTS = argv [2];
+			std::string filenameFormula = argv [3];
 
 			std::ifstream fileTS (filenameTS);
 			if (!fileTS)
@@ -59,21 +72,36 @@ int main (int argc, char* argv []) {
 			if (!fileFormula)
 				throw std::runtime_error ("Failed to open file: \"" + filenameFormula + "\"");
 
-			for (std::string line; std::getline (fileFormula, line); ) {
-				CTL::Expression formula;
-				if (!CTL::isEmpty(line)) {
-					if (!CTL::parse (line, formula))
-						throw std::runtime_error ("Failed to parse formula \"" + line + "\" from file \"" + filenameFormula + "\"");
+			if (ctl) {
+				for (std::string line; std::getline (fileFormula, line); ) {
+					Formula::Expression formula;
+					if (!BaseGrammar::isEmpty(line)) {
+						if (!CTL::parse (line, formula))
+							throw std::runtime_error ("Failed to parse CTL formula \"" + line + "\" from file \"" + filenameFormula + "\"");
 
-					auto sat = CTL::computeSat (formula, ts);
-					std::cout << line << std::endl;
-					if (sat.first)
-						std::cout << "Is satisfied" << std::endl;
-					else
-						std::cout << "Is not satisfied" << std::endl;
+						auto sat = CTL::computeSat (formula, ts);
+						std::cout << line << std::endl;
+						if (sat.first)
+							std::cout << "Is satisfied" << std::endl;
+						else
+							std::cout << "Is not satisfied" << std::endl;
 
-					sat.second->print (std::cout, 0);
+						sat.second->print (std::cout, 0);
+					}
 				}
+			} else {
+				LTL::Output op (argv [4]);
+				for (std::string line; std::getline (fileFormula, line); ) {
+					Formula::Expression formula;
+					if (!BaseGrammar::isEmpty(line)) {
+						if (!LTL::parse (line, formula))
+							throw std::runtime_error ("Failed to parse LTL formula \"" + line + "\" from file \"" + filenameFormula + "\"");
+
+						LTL::Algorithm a (formula, ts);
+						op.output (a);
+					}
+				}
+				op.finish ();
 			}
 		}
 	} catch (std::exception& e) {

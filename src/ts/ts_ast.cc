@@ -20,50 +20,60 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SRC_TS_SYS_HH_
-#define SRC_TS_SYS_HH_
-
-#include <set>
-#include <map>
-#include <vector>
-#include <string>
-#include <stdexcept>
-#include <functional>
-
+#include <boost/optional/optional_io.hpp>
 #include "ts_ast.hh"
 
 namespace TS {
-	class Label {
-		public:
-			std::string name;
-	};
+std::ostream& operator<< (std::ostream& os, const E_Transition& l) {
+	os << "E_Transition {\"" << l.from << "\", \"" << l.to << "\"}";
+    return os;
 }
 
-namespace std {
-	template <>
-	struct hash<::TS::Label> {
-		size_t operator() (const ::TS::Label &l) const {
-			return std::hash<std::string> () (l.name);
-		}
-	};
+std::ostream& operator<< (std::ostream& os, const E_AttrGeneric& l) {
+	os << "E_AttrGeneric {\"" << l.name << "\", \"" << l.value << "\"}";
+    return os;
 }
 
-namespace TS {
-	class State {
-		public:
-			inline State (const std::string& name_) : name (name_) {}
-			std::string name;
-			std::set<Label*> atomicPropositions;
-			std::set<State*> predecessors, successors;
-	};
-	class TranSys {
-		public:
-			std::map<std::string, Label> labels;
-			std::map<std::string, State> statesMap;
-			std::set<State*> statesSet, init;
-
-			TranSys (const E_Graph& src);
-	};
+std::ostream& operator<< (std::ostream& os, const E_AttrShape& l) {
+	os << "E_AttrShape {\"" << l.shape << "\"}";
+	return os;
 }
 
-#endif /* SRC_TS_SYS_HH_ */
+std::ostream& operator<< (std::ostream& os, const E_AttrLabel& l) {
+	os << "E_AttrLabel {";
+
+	if (l.name)
+		os << "\"" << *(l.name) << "\", {";
+	else
+		os << "boost::none, {";
+
+	for (const auto& ap : l.atomicPropositions) {
+		os << "\"" << ap << "\",";
+	}
+	os << "}}";
+	return os;
+}
+
+std::ostream& operator<< (std::ostream& os, const E_AttrDecl& l) {
+	os << "E_AttrDecl {\"" << l.node << "\", {";
+
+	for (const auto& a : l.attributes) {
+		os << a << ", ";
+	}
+
+	os << "}}";
+    return os;
+}
+
+std::ostream& operator<< (std::ostream& os, const E_Graph& a) {
+	os << "E_Graph {\"" << a.name << "\", {";
+
+	for (const auto& s : a.statements) {
+		os << s << ", ";
+	}
+
+	os << "}}";
+    return os;
+}
+
+}
