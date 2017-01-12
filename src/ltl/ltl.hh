@@ -26,38 +26,45 @@
 #include <cstddef>
 #include <stdexcept>
 #include <unordered_set>
+#include <map>
 #include <vector>
 #include "../formula_ast.hh"
 #include "../ts/sys.hh"
 
 namespace LTL {
-	using Closure = std::unordered_set<Formula::ExpRef, boost::hash<Formula::ExpRef>>;
+	using ExpSet = std::unordered_set<Formula::ExpRef, boost::hash<Formula::ExpRef>>;
 
+	struct Atom {
+		inline Atom (const TS::State* s, std::size_t exp) : state (s), expressions (exp), name (s->name + '_' + std::to_string (exp)) {}
+		const TS::State* state;
+		std::size_t expressions; // Index into Algorithm::atomExpressions
+		std::string name;
+	};
 	struct TableauEdge {
-		inline TableauEdge (const TS::State* ss, const TS::State* es, std::size_t sa, std::size_t ea) : startState (ss), endState (es), startAtom (sa), endAtom (ea) {}
-		const TS::State* startState, *endState;
-		std::size_t startAtom, endAtom;
+		inline TableauEdge (std::size_t s, std::size_t e) : start (s), end (e) {}
+		std::size_t start, end;
 	};
 	struct Algorithm {
 		Algorithm (const Formula::Expression& exp, const TS::TranSys& sys);
 
-		Closure closure;
+		ExpSet closure;
 		const Formula::Expression& formula;
 		std::vector<Formula::Expression> auxExp;
-		std::vector<Closure> sharedAtoms;
-		std::map<const TS::State*, std::vector<size_t>> atoms;
+		std::vector<ExpSet> atomExpressions;
+		std::vector<Atom> atoms;
+		std::multimap<const TS::State*, std::size_t, TS::CompareStatePtr> atomMap;
 		std::vector<TableauEdge> edges;
 	};
 
-	std::ostream& operator << (std::ostream& os, const LTL::Closure& c);
+	std::ostream& operator << (std::ostream& os, const LTL::ExpSet& c);
 
 	class ClosureVisitor : public boost::static_visitor<int> {
 		private:
-			Closure& m_closure;
+			ExpSet& m_closure;
 			std::vector<Formula::Expression>& m_auxExp;
 			const Formula::Expression* m_parentExp;
 		public:
-			inline ClosureVisitor (Closure& c, std::vector<Formula::Expression>& ae, const Formula::Expression* parentExp) : m_closure (c), m_auxExp (ae), m_parentExp (parentExp) {}
+			inline ClosureVisitor (ExpSet& c, std::vector<Formula::Expression>& ae, const Formula::Expression* parentExp) : m_closure (c), m_auxExp (ae), m_parentExp (parentExp) {}
 
 			template <typename T>
 			typename std::enable_if<Formula::ExpTraits<T>::unary && Formula::ExpTraits<T>::ltl, int>::type operator () (const T& exp) {
@@ -91,12 +98,12 @@ namespace LTL {
 
 	class Consistency_ClosureVisitor : public boost::static_visitor<bool> {
 		private:
-			const Closure& m_atom;
+			const ExpSet& m_atom;
 			const TS::TranSys& m_tranSys;
 			const TS::State& m_state;
 		public:
 			Formula::ExpRef m_parentExp;
-			inline Consistency_ClosureVisitor (const Closure& atom, const TS::TranSys& ts, const TS::State& state) : m_atom (atom), m_tranSys (ts), m_state (state) {}
+			inline Consistency_ClosureVisitor (const ExpSet& atom, const TS::TranSys& ts, const TS::State& state) : m_atom (atom), m_tranSys (ts), m_state (state) {}
 
 			bool operator () (const Formula::E_Label& exp);
 			bool operator () (const Formula::E_Literal& exp);

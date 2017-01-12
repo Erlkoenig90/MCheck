@@ -64,15 +64,20 @@ void LTL::Output::output (Algorithm& result) {
 
 
 	osGV << "digraph G {\n\tmargin=0;\n\tgraph [rankdir=LR]\n";
-	for (auto& a : result.atoms) {
-		osGV << "\t{rank=same;";
-		for (size_t i : a.second) {
-			osGV << ' ' << a.first->name << '_' << i;
+	const TS::State* last = nullptr;
+	for (auto& a : result.atomMap) {
+		if (last != a.first) {
+			if (last)
+				osGV << "; }\n";
+			osGV << "\t{rank=same;";
 		}
-		osGV << "; }\n";
+		last = a.first;
+		osGV << ' ' << result.atoms [a.second].name;
 	}
+	if (last) osGV << "; }\n";
+
 	for (const TableauEdge& edge : result.edges) {
-		osGV << '\t' << edge.startState->name << '_' << edge.startAtom << " -> " << edge.endState->name << '_' << edge.endAtom << '\n';
+		osGV << '\t' << result.atoms[edge.start].name << " -> " << result.atoms[edge.end].name << '\n';
 	}
 	osGV << "}\n";
 	osGV.close ();
@@ -88,10 +93,9 @@ void LTL::Output::output (Algorithm& result) {
 	m_osLatex << "& \\mathrm{Formula:} " << Formula::latexprint << result.formula << " & \\\\\n";
 	m_osLatex << "& \\mathrm{Closure\\left[" << result.closure.size () << "\\right]:} " << Formula::latexprint << result.closure << " & \\\\\n";
 
-	for (auto& a : result.atoms) {
-		for (size_t i : a.second) {
-			m_osLatex << "& \\mathrm{" << a.first->name << "\\_" << i << ":}" << Formula::latexprint << result.sharedAtoms[i] << " & \\\\\n";
-		}
+	for (auto& iAtom : result.atomMap) {
+		Atom& atom = result.atoms [iAtom.second];
+		m_osLatex << "& \\mathrm{" << atom.state->name << ":}" << Formula::latexprint << result.atomExpressions[atom.expressions] << " & \\\\\n";
 	}
 	m_osLatex << "\\end{flalign*}\n";
 	++m_serial;

@@ -56,6 +56,12 @@ namespace TS {
 			std::set<Label*> atomicPropositions;
 			std::set<State*> predecessors, successors;
 	};
+	struct CompareStatePtr {
+		bool operator () (const State* lhs, const State* rhs) {
+			return lhs->name < rhs->name;
+		}
+	};
+
 	class TranSys {
 		public:
 			std::map<std::string, Label> labels;

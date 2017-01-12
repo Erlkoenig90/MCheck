@@ -33,7 +33,7 @@
 #include <boost/fusion/include/hash.hpp>
 
 
-std::ostream& LTL::operator << (std::ostream& os, const LTL::Closure& c) {
+std::ostream& LTL::operator << (std::ostream& os, const LTL::ExpSet& c) {
 	if (os.iword (Formula::Formula_Xalloc) == 2) os << "\\left\\{";
 	else os << "{";
 	bool first = true;
@@ -60,10 +60,10 @@ LTL::Algorithm::Algorithm (const Formula::Expression& exp, const TS::TranSys& ts
 
 	const Counter max = (1 << closure.size ()) - 1;
 
-	sharedAtoms.push_back ({});
+	atomExpressions.push_back ({});
 
 	for (Counter iComb = 0; iComb < max; ++iComb) {
-		Closure& atom = sharedAtoms.back ();
+		ExpSet& atom = atomExpressions.back ();
 
 		Counter mask = 1;
 		for (auto& cexp : closure) {
@@ -80,37 +80,38 @@ LTL::Algorithm::Algorithm (const Formula::Expression& exp, const TS::TranSys& ts
 
 			if (consistent) {
 				needed = true;
-				atoms[state].push_back(sharedAtoms.size () - 1);
+				atomMap.insert (std::make_pair<const TS::State*, std::size_t> (state, atoms.size ()));
+				atoms.emplace_back (state, atomExpressions.size () - 1);
 			}
 		}
 		if (needed) {
-			sharedAtoms.push_back ({});
+			atomExpressions.push_back ({});
 		} else {
 			atom.clear ();
 		}
 	}
-	sharedAtoms.pop_back ();
+	atomExpressions.pop_back ();
 
-	for (auto& a : atoms) {
-		for (const TS::State* succ : a.first->successors) {
-			auto iter = atoms.find (succ);
-			if (iter != atoms.end ()) {
-				for (std::size_t iStartAtom : a.second) {
-					const Closure& startAtom = sharedAtoms [iStartAtom];
-					for (size_t iEndAtom : iter->second) {
-						const Closure& endAtom = sharedAtoms [iEndAtom];
+	for (std::size_t iStartAtom = 0; iStartAtom < atoms.size (); ++iStartAtom) {
+		Atom& startAtom = atoms [iStartAtom];
+		for (const TS::State* succ : startAtom.state->successors) {
+			auto endRange = atomMap.equal_range (succ);
+			for (auto iter = endRange.first; iter != endRange.second; ++iter) {
+				std::size_t iEndAtom = iter->second;
+				const Atom& endAtom = atoms [iEndAtom];
 
-						if (std::all_of (closure.begin (), closure.end (), [&] (const Formula::ExpRef& elem) {
-							if (const Formula::E_Next* next = boost::get<Formula::E_Next> (&*elem)) {
-								return	(startAtom.find (elem) == startAtom.end ())
-									==	(endAtom.find(&next->exp) == endAtom.end ());
-							} else {
-								return true;
-							}
-						})) {
-							edges.emplace_back (a.first, succ, iStartAtom, iEndAtom);
-						}
+				const ExpSet& startExp = atomExpressions [startAtom.expressions];
+				const ExpSet& endExp = atomExpressions [endAtom.expressions];
+
+				if (std::all_of (closure.begin (), closure.end (), [&] (const Formula::ExpRef& elem) {
+					if (const Formula::E_Next* next = boost::get<Formula::E_Next> (&*elem)) {
+						return	(startExp.find (elem) == startExp.end ())
+							==	(endExp.find(&next->exp) == endExp.end ());
+					} else {
+						return true;
 					}
+				})) {
+					edges.emplace_back (iStartAtom, iEndAtom);
 				}
 			}
 		}
