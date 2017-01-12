@@ -22,49 +22,45 @@
 
 #include <fstream>
 #include <cstdlib>
-#include <stdlib.h>
-#include <unistd.h>
+#include <locale>
+#include <codecvt>
+#include <utility>
 
+#include <boost/algorithm/string/replace.hpp>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#ifdef __unix__
 #include <stdio.h>
+#include <errno.h>
+#endif
 
 #include "ltl_output.hh"
 
+LTL::Output::Output (const sysstring& outputPath) : m_serial (0), m_outputPath (outputPath) {
+	do {
+		m_tmpPath = boost::filesystem::temp_directory_path () / boost::filesystem::unique_path ();
+	} while (!boost::filesystem::create_directory (m_tmpPath));
 
-class AutoRemover {
-	const std::string& tmpdir;
-	AutoRemover (const std::string& d) : tmpdir (d) {}
-	~AutoRemover () {
-		unlink ((tmpdir + "/mcheck.gv").c_str ());
-		unlink ((tmpdir + "/mcheck.tex").c_str ());
-		rmdir (tmpdir.c_str ());
-	}
-};
-
-LTL::Output::Output (std::string outputFilename) : m_serial (0), m_outputFilename (outputFilename) {
-	char tmpdirC [] = "/tmp/mcheckpdfXXXXXX";
-	if (!mkdtemp (tmpdirC)) {
-		throw std::runtime_error ("Couldn't create temporary directory for output!");
-	}
-	m_tmpdir = tmpdirC;
-
-	m_lxPath = m_tmpdir + "/mcheck.tex";
-	m_osLatex.open (m_lxPath);
+	m_lxPath = m_tmpPath / SYSLIT("mcheck.tex");
+	m_osLatex.open (m_lxPath.native (), std::ios::binary);
 	if (!m_osLatex)
-		throw std::runtime_error ("Couldn't open LaTeX file:" + m_lxPath);
+		throw std::runtime_error ("Couldn't open LaTeX file:" + to_int (m_lxPath.native ()));
 
-	m_osLatex <<	"\\title{LTL Output} \\date{\\today} \\documentclass[a4paper,12pt]{minimal} \\usepackage[a4paper, margin=15mm]{geometry}"
-				"\\usepackage[T1]{fontenc} \\usepackage[utf8]{inputenc} \\usepackage{pdfpages} \\usepackage{amsmath} \\begin{document}\n";
+	m_osLatex <<	"\\title{LTL Output} \\date{\\today} \\documentclass[a4paper,12pt]{minimal} \\usepackage[a4paper, top=15mm, bottom=30mm, left=15mm, right=15mm]{geometry}"
+				"\\usepackage{graphicx}\\usepackage[space]{grffile}\\usepackage[T1]{fontenc} \\usepackage[utf8]{inputenc} \\usepackage{pdfpages} \\usepackage{amsmath} \\begin{document}\n";
 }
 
 LTL::Output::~Output () {
 	m_osLatex.close ();
-	system (("rm -r \"" + m_tmpdir + "\"").c_str ());
+	boost::filesystem::remove_all (m_tmpPath);
 }
 
 void LTL::Output::output (Algorithm& result) {
-	std::string gvPath (m_tmpdir + "/mcheck_" + std::to_string(m_serial) + ".gv");
-	std::ofstream osGV (gvPath);
-	if (!osGV) throw std::runtime_error ("Couldn't open graphviz file: " + gvPath);
+	boost::filesystem::path gvPath = m_tmpPath / (SYSLIT("mcheck_") + to_sys (m_serial) + SYSLIT(".gv"));
+	std::ofstream osGV (gvPath.native (), std::ios::binary);
+	if (!osGV) throw std::runtime_error ("Couldn't open graphviz file: " + to_int (gvPath.native ()));
 
 
 	osGV << "digraph G {\n\tmargin=0;\n\tgraph [rankdir=LR]\n";
@@ -81,11 +77,14 @@ void LTL::Output::output (Algorithm& result) {
 	osGV << "}\n";
 	osGV.close ();
 
-	std::string tblPath = m_tmpdir + "/tableau_" + std::to_string (m_serial) + ".pdf";
-	if (std::system (("dot -Tpdf -o \"" + tblPath + "\" \"" + gvPath + "\"").c_str ()) != 0)
+	boost::filesystem::path tblPath = m_tmpPath / (SYSLIT ("tableau_") + to_sys (m_serial) + SYSLIT (".pdf"));
+	if (auto_system ((SYSLIT ("dot -Tpdf -o ") + escape (tblPath) + SYSLIT(" ") + escape (gvPath)).c_str ()) != 0)
 		throw std::runtime_error ("Error running GraphViz!");
 
-	m_osLatex << "\\includegraphics{" << tblPath << "}\n\\begin{flalign*}\n";
+	std::string tblPathLatex = tblPath.generic_string ();
+	boost::replace_all (tblPathLatex, "}", "\\}");
+
+	m_osLatex << "\\includegraphics{" << tblPathLatex << "}\n\\begin{flalign*}\n";
 	m_osLatex << "& \\mathrm{Formula:} " << Formula::latexprint << result.formula << " & \\\\\n";
 	m_osLatex << "& \\mathrm{Closure\\left[" << result.closure.size () << "\\right]:} " << Formula::latexprint << result.closure << " & \\\\\n";
 
@@ -102,11 +101,25 @@ void LTL::Output::finish () {
 	m_osLatex << "\\end{document}\n\n";
 	m_osLatex.close ();
 
-	if (std::system (("pdflatex -output-directory \"" + m_tmpdir + "\" \"" + m_tmpdir + "/mcheck.tex\"").c_str ()) != 0)
+	if (auto_system ((SYSLIT ("pdflatex -output-directory ") + escape (m_tmpPath) + SYSLIT(" ") + escape (m_lxPath)).c_str ()) != 0)
 		throw std::runtime_error ("Error running pdflatex!");
 
-	std::string pdfPath = m_tmpdir + "/mcheck.pdf";
-	if (system (("mv \"" + pdfPath + "\" \"" + m_outputFilename + "\"").c_str ()) != 0) {
-		throw std::runtime_error ("Error moving \"" + pdfPath + "\" to \"" + m_outputFilename + "\"");
+	boost::filesystem::path pdfPath = m_tmpPath / + SYSLIT ("mcheck.pdf");
+
+#ifdef _WIN32
+	if (!MoveFileExW (pdfPath.c_str (), m_outputPath.c_str (), MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING)) {
+		throw std::runtime_error ("Couldn't move PDF: " + to_int (escape (pdfPath.native ())) + " to " + to_int (escape (m_outputPath.native ())));
 	}
+#endif
+#ifdef __unix__
+	if (rename (pdfPath.c_str (), m_outputPath.c_str ()) != 0) {
+		if (errno == EXDEV) {
+			boost::filesystem::copy_file (pdfPath, m_outputPath, boost::filesystem::copy_option::overwrite_if_exists);
+			boost::filesystem::remove (pdfPath);
+		} else {
+			throw std::runtime_error("Couldn't move PDF: " + to_int(escape(pdfPath.native())) + " to " + to_int(escape(m_outputPath.native())));
+		}
+	}
+#endif
+
 }

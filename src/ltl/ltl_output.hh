@@ -26,19 +26,22 @@
 #include <string>
 #include <cstddef>
 #include <fstream>
+
+#include <boost/filesystem.hpp>
 #include "ltl.hh"
+#include "../sysstring.hh"
 
 namespace LTL {
 	class Output {
 		public:
-			Output (std::string outputFilename);
+			Output (const sysstring& outputFilename);
 			~Output ();
 
 			void output (Algorithm& result);
 			void finish ();
 		private:
 			std::size_t m_serial;
-			std::string m_outputFilename, m_tmpdir, m_lxPath;
+			boost::filesystem::path m_outputPath, m_tmpPath, m_lxPath;
 			std::ofstream m_osLatex;
 	};
 }

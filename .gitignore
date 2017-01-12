@@ -1,2 +1,26 @@
-/Debug/
-/Release/
+# CMake Ignores
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+
+# Unix Ignores
+Makefile
+MCheck
+
+# Eclipse Ignores
+.cproject
+.project
+.settings
+
+# MSVC Ignores
+*.vcxproj
+*.vcxproj.filters
+*.sln
+Debug
+Release
+RelWithDebInfo
+MinSizeRel
+MCheck.VC.VC.opendb
+MCheck.VC.db
+MCheck.dir
+x64

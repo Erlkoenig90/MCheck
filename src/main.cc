@@ -28,6 +28,12 @@
 #include <fstream>
 #include <streambuf>
 #include <stdexcept>
+#include <sstream>
+
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 #include "ts/grammar.hh"
 #include "ts/sys.hh"
@@ -36,66 +42,88 @@
 #include "ltl/ltl_grammar.hh"
 #include "ltl/ltl.hh"
 #include "ltl/ltl_output.hh"
+#include "sysstring.hh"
 
-void usage (char* argv []) {
-	throw std::runtime_error ("Usage:\n" + std::string(argv [0]) + " CTL TS-File Formula-File\n" + std::string(argv [0]) + " LTL TS-File Formula-File PDFOutput");
+void usage (const std::vector<sysstring>& args) {
+	syserr () << SYSLIT("Usage:\n") << args [0] << SYSLIT(" CTL TS-File Formula-File\n") << args [0] << SYSLIT(" LTL TS-File Formula-File PDFOutput\n");
 }
 
+#ifdef _WIN32
+int wmain (int argc, wchar_t* argv []) {
+	_setmode (_fileno (stdout), _O_U16TEXT);
+#else
 int main (int argc, char* argv []) {
+#endif
+	std::vector<sysstring> args (argv, argv + argc);
+
 	try {
-		if (argc < 2) {
-			usage (argv);
+		if (args.size () < 2) {
+			usage (args);
+			return 1;
 		} else {
-			const bool ctl = std::string(argv[1]) == "CTL";
-			if (ctl && argc < 4)
-				usage (argv);
-			if (!ctl && argc < 5)
-				usage (argv);
+			const bool ctl = args[1] == SYSLIT("CTL");
+			if ((ctl && args.size () < 4)
+			||	(!ctl && args.size () < 5)) {
+				usage (args);
+				return 1;
+			}
 
-			std::string filenameTS = argv [2];
-			std::string filenameFormula = argv [3];
+			const sysstring& filenameTS = args [2];
+			const sysstring& filenameFormula = args [3];
 
-			std::ifstream fileTS (filenameTS);
+			std::ifstream fileTS (filenameTS, std::ios::binary);
 			if (!fileTS)
-				throw std::runtime_error ("Failed to open file: \"" + filenameTS + "\"");
+				throw std::runtime_error ("Failed to open file: " + to_int (escape (filenameTS)));
 
 			std::string strTS ((std::istreambuf_iterator<char> (fileTS)), std::istreambuf_iterator<char> ());
 			fileTS.close ();
 
 			TS::E_Graph graph;
 			if (!TS::parse (strTS, graph))
-				throw std::runtime_error ("Failed to parse transition system from file \"" + filenameTS + "\"");
+				throw std::runtime_error ("Failed to parse transition system from file " + to_int (escape (filenameTS)));
 
 			TS::TranSys ts (graph);
 
-			std::ifstream fileFormula (filenameFormula);
+			std::ifstream fileFormula (filenameFormula, std::ios::binary);
 			if (!fileFormula)
-				throw std::runtime_error ("Failed to open file: \"" + filenameFormula + "\"");
+				throw std::runtime_error ("Failed to open file: " + to_int(escape(filenameFormula)));
 
 			if (ctl) {
 				for (std::string line; std::getline (fileFormula, line); ) {
 					Formula::Expression formula;
 					if (!BaseGrammar::isEmpty(line)) {
+						sysout () << "Parsing line" << std::endl;
+
 						if (!CTL::parse (line, formula))
-							throw std::runtime_error ("Failed to parse CTL formula \"" + line + "\" from file \"" + filenameFormula + "\"");
+							throw std::runtime_error ("Failed to parse CTL formula \"" + line + "\" from file " + to_int (escape (filenameFormula)) + "");
+
+						sysout () << "Computing SAT" << std::endl;
 
 						auto sat = CTL::computeSat (formula, ts);
-						std::cout << line << std::endl;
+						sysout () << "Printing formula" << std::endl;
+						sysout () << to_sys (line) << std::endl;
+						sysout () << "Printing result" << std::endl;
 						if (sat.first)
-							std::cout << "Is satisfied" << std::endl;
+							sysout () << SYSLIT ("Is satisfied") << std::endl;
 						else
-							std::cout << "Is not satisfied" << std::endl;
-
-						sat.second->print (std::cout, 0);
+							sysout () << SYSLIT ("Is not satisfied") << std::endl;
+#ifdef _WIN32
+						std::stringstream ss;
+						sat.second->print (ss, 0);
+						sysout () << "Printing SAT sets" << std::endl;
+						sysout () << to_sys (ss.str ());
+#else
+						sat.second->print (sysout (), 0);
+#endif
 					}
 				}
 			} else {
-				LTL::Output op (argv [4]);
+				LTL::Output op (args [4]);
 				for (std::string line; std::getline (fileFormula, line); ) {
 					Formula::Expression formula;
 					if (!BaseGrammar::isEmpty(line)) {
 						if (!LTL::parse (line, formula))
-							throw std::runtime_error ("Failed to parse LTL formula \"" + line + "\" from file \"" + filenameFormula + "\"");
+							throw std::runtime_error ("Failed to parse LTL formula \"" + line + "\" from file \"" + to_int (filenameFormula) + "\"");
 
 						LTL::Algorithm a (formula, ts);
 						op.output (a);
@@ -105,6 +133,6 @@ int main (int argc, char* argv []) {
 			}
 		}
 	} catch (std::exception& e) {
-		std::cerr << "Error: " << e.what () << std::endl;
+		syserr () << SYSLIT("Error: ") << to_sys (e.what ()) << std::endl;
 	}
 }

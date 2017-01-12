@@ -92,11 +92,15 @@ std::unique_ptr<S_Formula> SatVisitor::operator () (const Formula::E_ExistAlways
 		bool modified;
 		do {
 			modified = false;
-			for (TS::State* s : T) {
-				if (!(s->successors && T)) {
-					T.erase (s);
+			using I = std::set<TS::State*>::const_iterator;
+			for (I iter = T.cbegin (); iter != T.cend (); ) {
+				I next = iter;
+				++next;
+				if (!((*iter)->successors && T)) {
+					T.erase (iter);
 					modified = true;
 				}
+				iter = next;
 			}
 		} while (modified);
 

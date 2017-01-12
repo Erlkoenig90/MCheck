@@ -31,7 +31,6 @@
 #include "ltl.hh"
 #include <boost/functional/hash.hpp>
 #include <boost/fusion/include/hash.hpp>
-#include <boost/algorithm/string/replace.hpp>
 
 
 std::ostream& LTL::operator << (std::ostream& os, const LTL::Closure& c) {
@@ -54,8 +53,6 @@ LTL::Algorithm::Algorithm (const Formula::Expression& exp, const TS::TranSys& ts
 	ClosureVisitor visitor { closure, auxExp, &exp};
 	boost::apply_visitor (visitor, exp);
 
-	std::cout << "Closure: " << closure << std::endl;
-
 	using Counter = std::uint64_t;
 
 	if (closure.size () >= sizeof (Counter) * CHAR_BIT)
@@ -69,9 +66,9 @@ LTL::Algorithm::Algorithm (const Formula::Expression& exp, const TS::TranSys& ts
 		Closure& atom = sharedAtoms.back ();
 
 		Counter mask = 1;
-		for (auto& exp : closure) {
+		for (auto& cexp : closure) {
 			if (iComb & mask) {
-				atom.insert (exp);
+				atom.insert (cexp);
 			}
 
 			mask <<= 1;
