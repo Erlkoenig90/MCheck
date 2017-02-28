@@ -95,7 +95,9 @@ void LTL::Output::output (Algorithm& result) {
 
 	for (auto& iAtom : result.atomMap) {
 		Atom& atom = result.atoms [iAtom.second];
-		m_osLatex << "& \\mathrm{" << atom.state->name << ":}" << Formula::latexprint << result.atomExpressions[atom.expressions] << " & \\\\\n";
+		std::string name = atom.name;
+		boost::replace_all (name, "_", "\\_");
+		m_osLatex << "& \\mathrm{" << name << ":}" << Formula::latexprint << result.atomExpressions[atom.expressions] << " & \\\\\n";
 	}
 	m_osLatex << "\\end{flalign*}\n";
 	++m_serial;
