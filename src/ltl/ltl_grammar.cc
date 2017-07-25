@@ -31,7 +31,6 @@ namespace LTL {
 		using B = BaseGrammar::Grammar<Iterator>;
 		using typename B::Skip;
 		using B::formula;
-		using B::expression;
 		using B::primaryExpression;
 		using B::literal;
 		using B::label;
@@ -39,19 +38,21 @@ namespace LTL {
 		using B::andR;
 		using B::orR;
 		using B::implication;
+		using B::op0;
+		using B::op1;
+		using B::op2;
+		using B::op3;
+		using B::op4;
 
 		Grammar () {
 			using boost::spirit::qi::lit;
 			using boost::spirit::repository::qi::iter_pos;
 
-			expression %=
-					andR | orR | implication | next | until | primaryExpression;
+			until %= iter_pos >> op4 >> lit('U') >> op3 >> iter_pos;
+			next %= iter_pos >> lit('X') >> op4 >> iter_pos;
 
-			primaryExpression %= literal | negation | label | (lit('(') >> expression >> lit(')'));
-
-
-			next %= iter_pos >> lit('X') >> primaryExpression >> iter_pos;
-			until %= iter_pos >> primaryExpression >> lit('U') >> primaryExpression >> iter_pos;
+			op3 %= until | op4;
+			op4 %= next | negation | primaryExpression;
 		}
 		rule <Iterator, E_Next(), Skip> next;
 		rule <Iterator, E_Until(), Skip> until;

@@ -153,11 +153,11 @@ namespace Formula {
     		inline ExpRef& operator = (const ExpRef&) = default;
     		inline ExpRef& operator = (ExpRef&&) = default;
 
-			inline Target* operator -> () const { return exp; }
-			inline Target& operator * () const { return *exp; }
+			inline const Target* operator -> () const { return exp; }
+			inline const Target& operator * () const { return *exp; }
 
     	private:
-			Target* exp;
+			const Target* exp;
     };
     bool operator == (const ExpRef& a, const ExpRef& b);
     std::size_t hash_value (const ExpRef& e);

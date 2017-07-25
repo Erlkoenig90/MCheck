@@ -145,19 +145,23 @@ namespace BaseGrammar {
 			using boost::spirit::repository::qi::iter_pos;
 			using boost::spirit::qi::byte_;
 
-			formula %= expression >> -(lit('#') >> *byte_) >> eoi;
+			formula %= op0 >> -(lit('#') >> *byte_) >> eoi;
 
 			literal %= lexeme[iter_pos >> ((bool_ >> !identifier) | (lit("⊤") [ at_c<1>(_val) = true]) | (lit("⊥") [ at_c<1>(_val) = false])) >> iter_pos];
 			label %= lexeme [iter_pos >> identifier >> iter_pos];
 
+			implication %= iter_pos >> op1 >> (lit("->") | lit("→")) >> op0 >> iter_pos;
+			orR %= iter_pos >> op2 >> (lit("|") | lit("∨")) >> op1 >> iter_pos;
+			andR %= iter_pos >> op3 >> (lit("&") | lit("∧")) >> op2 >> iter_pos;
 			negation %= iter_pos >> (lit("¬") | lit("!")) >> primaryExpression >> iter_pos;
-			andR %= iter_pos >> primaryExpression >> (lit("&") | lit("∧")) >> primaryExpression >> iter_pos;
-			orR %= iter_pos >> primaryExpression >> (lit("|") | lit("∨")) >> primaryExpression >> iter_pos;
-			implication %= iter_pos >> primaryExpression >> (lit("->") | lit("→")) >> primaryExpression >> iter_pos;
+
+			op0 %= implication | op1;
+			op1 %= orR | op2;
+			op2 %= andR | op3;
+			primaryExpression %= literal | label | (lit('(') >> op0 >> lit(')'));
 		}
 
 		rule <Iterator, Formula::Expression(), Skip> formula;
-		rule <Iterator, Formula::Expression(), Skip> expression;
 		rule <Iterator, Formula::Expression(), Skip> primaryExpression;
 		rule <Iterator, Formula::E_Literal(), Skip> literal;
 		rule <Iterator, Formula::E_Label(), Skip> label;
@@ -167,6 +171,8 @@ namespace BaseGrammar {
 		rule <Iterator, Formula::E_And(), Skip> andR;
 		rule <Iterator, Formula::E_Or(), Skip> orR;
 		rule <Iterator, Formula::E_Implication(), Skip> implication;
+
+		rule <Iterator, Formula::Expression(), Skip> op0, op1, op2, op3, op4;
 	};
 
 	bool isEmpty (const std::string& str);

@@ -31,7 +31,6 @@ namespace CTL {
 		using B = BaseGrammar::Grammar<Iterator>;
 		using typename B::Skip;
 		using B::formula;
-		using B::expression;
 		using B::primaryExpression;
 		using B::literal;
 		using B::label;
@@ -39,24 +38,26 @@ namespace CTL {
 		using B::andR;
 		using B::orR;
 		using B::implication;
+		using B::op0;
+		using B::op1;
+		using B::op2;
+		using B::op3;
+		using B::op4;
 
 		Grammar () {
 			using boost::spirit::qi::lit;
 			using boost::spirit::repository::qi::iter_pos;
 
-			expression %=
-					andR | orR | implication | existNext | existAlways | allNext | allAlways | primaryExpression;
+			existNext %= iter_pos >> (lit("∃") | lit("E")) >> lit('X') >> op4 >> iter_pos;
+			existUntil %= iter_pos >> (lit("∃") | lit("E")) >> lit('(') >> op4 >> lit('U') >> op4 >> lit(')') >> iter_pos;
+			existAlways %= iter_pos >> (lit("∃") | lit("E")) >> (lit("⬜") | lit("W")) >> op4 >> iter_pos;
 
-			primaryExpression %= literal | negation | existUntil | allUntil | label | (lit('(') >> expression >> lit(')'));
+			allNext %= iter_pos >> (lit("∀") | lit("A")) >> lit('X') >> op4 >> iter_pos;
+			allUntil %= iter_pos >> (lit("∀") | lit("A")) >> lit('(') >> op4 >> lit('U') >> op4 >> lit(')') >> iter_pos;
+			allAlways %= iter_pos >> (lit("∀") | lit("A")) >> (lit("⬜") | lit("W")) >> op4 >> iter_pos;
 
-
-			existNext %= iter_pos >> (lit("∃") | lit("E")) >> lit('X') >> primaryExpression >> iter_pos;
-			existUntil %= iter_pos >> (lit("∃") | lit("E")) >> lit('(') >> primaryExpression >> lit('U') >> primaryExpression >> lit(')') >> iter_pos;
-			existAlways %= iter_pos >> (lit("∃") | lit("E")) >> (lit("⬜") | lit("W")) >> primaryExpression >> iter_pos;
-
-			allNext %= iter_pos >> (lit("∀") | lit("A")) >> lit('X') >> primaryExpression >> iter_pos;
-			allUntil %= iter_pos >> (lit("∀") | lit("A")) >> lit('(') >> primaryExpression >> lit('U') >> primaryExpression >> lit(')') >> iter_pos;
-			allAlways %= iter_pos >> (lit("∀") | lit("A")) >> (lit("⬜") | lit("W")) >> primaryExpression >> iter_pos;
+			op3 %= op4;
+			op4 %= existUntil | allUntil | negation | existNext | existAlways | allNext | allAlways | primaryExpression;
 		}
 		rule <Iterator, E_ExistNext(), Skip> existNext;
 		rule <Iterator, E_ExistUntil(), Skip> existUntil;

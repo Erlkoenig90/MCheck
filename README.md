@@ -62,7 +62,20 @@ Form | ASCII Alternative | Description
 Φ∨Ψ | \| | Logical Or
 Φ→Ψ | -> | Logical implication
 XΦ | X | Next
-(Φ U Ψ) |  | Until
+Φ U Ψ |  | Until
+
+### Operator precedence
+This table sums up the operator precedences. The first row has the highest precedence. The CTL/LTL formula grammars each include only a subset of these operators:
+
+Precedence | Operators
+-----------|----------
+4 | XΦ, ¬Φ, ∃XΦ, ∃(Φ U Ψ), ∃⬜Φ, ∀XΦ, ∀(Φ U Ψ), ∀⬜Φ
+3 | Φ U Ψ
+2 | Φ∧Ψ
+1 | Φ∨Ψ
+0 | Φ→Ψ
+
+As with many other languages, precedence can be enforced by parentheses.
 
 ## Usage
 MCheck is a console application, run it as:

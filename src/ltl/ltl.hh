@@ -49,7 +49,7 @@ namespace LTL {
 
 		ExpSet closure;
 		const Formula::Expression& formula;
-		std::vector<Formula::Expression> auxExp;
+		std::list<Formula::Expression> auxExp;
 		std::vector<ExpSet> atomExpressions;
 		std::vector<Atom> atoms;
 		std::multimap<const TS::State*, std::size_t, TS::CompareStatePtr> atomMap;
@@ -61,10 +61,10 @@ namespace LTL {
 	class ClosureVisitor : public boost::static_visitor<int> {
 		private:
 			ExpSet& m_closure;
-			std::vector<Formula::Expression>& m_auxExp;
+			std::list<Formula::Expression>& m_auxExp;
 			const Formula::Expression* m_parentExp;
 		public:
-			inline ClosureVisitor (ExpSet& c, std::vector<Formula::Expression>& ae, const Formula::Expression* parentExp) : m_closure (c), m_auxExp (ae), m_parentExp (parentExp) {}
+			inline ClosureVisitor (ExpSet& c, std::list<Formula::Expression>& ae, const Formula::Expression* parentExp) : m_closure (c), m_auxExp (ae), m_parentExp (parentExp) {}
 
 			template <typename T>
 			typename std::enable_if<Formula::ExpTraits<T>::unary && Formula::ExpTraits<T>::ltl, int>::type operator () (const T& exp) {
